@@ -238,28 +238,33 @@ function getSlice(layerNumber) {
                         " F" + settings.get('slicer.lifting.decline') + ";\n{{\n"
                     */
 
-                    wowFileArray.push(";L:");
-                    wowFileArray.push(layerNumber);
-                    wowFileArray.push(";\nM106 S0;\nG1 Z");
-                    wowFileArray.push(settings.get('slicer.lifting.height'));
-                    wowFileArray.push(" F");
-                    wowFileArray.push(settings.get('slicer.lifting.speed'));
-                    wowFileArray.push(";\nG1 Z-");
-                    wowFileArray.push((settings.get('slicer.lifting.height') - settings.get('slicer.layers.height') / 1000));
-                    wowFileArray.push(" F");
-                    wowFileArray.push(settings.get('slicer.lifting.decline'));
-                    wowFileArray.push(";\n{{\n");
+                    wowLayer = [];
+
+                    wowLayer.push(";L:");
+                    wowLayer.push(layerNumber);
+                    wowLayer.push(";\nM106 S0;\nG1 Z");
+                    wowLayer.push(settings.get('slicer.lifting.height'));
+                    wowLayer.push(" F");
+                    wowLayer.push(settings.get('slicer.lifting.speed'));
+                    wowLayer.push(";\nG1 Z-");
+                    wowLayer.push((settings.get('slicer.lifting.height') - settings.get('slicer.layers.height') / 1000));
+                    wowLayer.push(" F");
+                    wowLayer.push(settings.get('slicer.lifting.decline'));
+                    wowLayer.push(";\n{{\n");
 
 
                     //var binary_layer = (new TextDecoder("utf-8")).decode(array)
                     //wowFile += bin2string(array);
 
-                    wowFileArray.push(bin2JoinedChars(array));
+                    //wowLayer.push(bin2JoinedChars(array));
+
+                    wowLayer=wowLayer.concat(bin2CharArray(array))
+                    //wowLayer=appendBin2Chars(array,wowLayer);
 
                     //wowFile += array.map(intBytetoHexBin);
                     //wowFile += "\n";
 
-                    wowFileArray.push("\n");
+                    wowLayer.push("\n");
 
                     if (settings.get('slicer.folder')) {
                         // Backup text file
@@ -275,11 +280,13 @@ function getSlice(layerNumber) {
                     }
                     //wowFile += "}}\nM106 S"+settings.get('slicer.light.strength')+";\nG4 S" + exposure_time / 1000 + ";\n"
 
-                    wowFileArray.push("}}\nM106 S");
-                    wowFileArray.push(settings.get('slicer.light.strength'));
-                    wowFileArray.push(";\nG4 S");
-                    wowFileArray.push(exposure_time / 1000);
-                    wowFileArray.push(";\n");
+                    wowLayer.push("}}\nM106 S");
+                    wowLayer.push(settings.get('slicer.light.strength'));
+                    wowLayer.push(";\nG4 S");
+                    wowLayer.push(exposure_time / 1000);
+                    wowLayer.push(";\n");
+
+                    wowFileArray.push(wowLayer.join(''));
                 }
             });
 
@@ -402,6 +409,21 @@ function bin2JoinedChars(array){
         result.push( String.fromCharCode(array[i]) );
     }
     return result.join('');
+}
+
+function bin2CharArray(array){
+    var result = [];
+    for(var i = 0; i < array.length; ++i){
+        result.push( String.fromCharCode(array[i]) );
+    }
+    return result;
+}
+
+function appendBin2Chars(array, result){
+    for(var i = 0; i < array.length; ++i){
+        result.push( String.fromCharCode(array[i]) );
+    }
+    return result;
 }
 
 // array.map(intBytetoHexBin);
@@ -764,6 +786,7 @@ var zipFile;
 var zipFolder;
 var wowFile;
 var wowFileArray;
+var wowLayer;
 
 var WOWExport;
 var SVGExport;
@@ -843,6 +866,7 @@ function startSlicing() {
     zipFolder = null;
     wowFile   = null;
     wowFileArray = null;
+    wowLayer = null;
     WOWExport = null;
     SVGExport = null;
     PNGExport = null;
