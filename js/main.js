@@ -69,6 +69,7 @@ var settings = new SLAcer.Settings({
         }
     },
     screen: {
+        aa       : 1,
         width    : 854,//window.screen.width,
         height   : 480,//window.screen.height,
         diagonal : { size: 4.6, unit: 'in' },
@@ -215,16 +216,38 @@ function getSlice(layerNumber) {
                  Black red=0, green=0, blue=0, alpha=255;
                  White red=255, green=255, blue=255, alpha=255;
                  */
+                var aa = settings.get('screen.aa');
                 var width = settings.get('screen.width');
                 var height = settings.get('screen.height');
+
+                //console.log('aa :', aa);
+                //console.log('width :', width);
+                //console.log('height :', height);
+
                 var pixel = 0;
+                var arrays = []
+                for(var i_array=0; i_array<aa;i_array+=1){
+                    arrays[i_array] = new Uint8Array(width*height/8);
+                }
                 var array = new Uint8Array(width*height/8);
                 var data = imageData.data;
 
-                for(var w=0; w<data.length/height*4; w+=4) {
-                    for(var h=w; h<width*height*4; h+=(4*width)) {
-                        if(data[h]!==0){
-                            array[~~(pixel/8)] += Math.pow(2,(pixel%8))
+                for(var w=0; w<data.length/height*4*aa; w+=4*aa) {
+                    for(var h=w; h<width*height*4*aa; h+=(4*width*aa)) {
+                        //aa
+                        var bits = 0;
+                        for(var wa=w; wa<w+4*aa; wa+=4) {
+                            for(var ha=wa; ha<wa+(4*width*aa); ha+=(4*width)) {
+                                if(data[h]!==0){
+                                    bits+=1;
+                                }
+                            }
+                        }
+                        for(var i_array=0; i_array<aa;i_array+=1){
+                            if(1==(int)(bits/Math.pow(2,aa-i_array-1))){
+                                bits-=Math.pow(2,aa-i_array-1)
+                                arrays[aa-1-i_array][~~(pixel/8)] += Math.pow(2,(pixel%8))
+                            }
                         }
                         pixel++;
                     }
@@ -881,6 +904,7 @@ function startSlicing() {
             imageExtension: settings.get('slicer.png') ? 'png' : settings.get('slicer.svg') ? 'svg' : 'wow',
             imageDirectoryCreated: settings.get('slicer.folder') ? 'false' : 'true',
             imageDirectory: !settings.get('slicer.folder') ? '' : 'slices',
+            screenAA      : settings.get('screen.aa'),
             screenWidth   : settings.get('screen.width'),
             screenHeight  : settings.get('screen.height'),
             screenSize    : settings.get('screen.diagonal.size'),
@@ -1055,6 +1079,7 @@ updateResinUI();
 
 // Screen
 var $screenBody         = initPanel('screen');
+var $screenAA           = $screenBody.find('#screen-aa');
 var $screenWidth        = $screenBody.find('#screen-width');
 var $screenHeight       = $screenBody.find('#screen-height');
 var $screenDiagonalSize = $screenBody.find('#screen-diagonal-size');
@@ -1062,7 +1087,7 @@ var $screenDotPitch     = $screenBody.find('#screen-dot-pitch');
 
 function updateScreenUI() {
     var screen = settings.get('screen');
-
+    $screenAA.val(screen.aa);
     $screenWidth.val(screen.width);
     $screenHeight.val(screen.height);
     $screenDiagonalSize.val(screen.diagonal.size);
@@ -1081,8 +1106,9 @@ function updateScreenSettings() {
     }
 
     settings.set('screen', {
-        width   : $screenWidth.val(),
-        height  : $screenHeight.val(),
+        aa      : $screenAA.val(),
+        width   : $screenWidth.val()*$screenAA.val(),
+        height  : $screenHeight.val()*$screenAA.val(),
         diagonal: {
             size: $screenDiagonalSize.val(),
             unit: unit
