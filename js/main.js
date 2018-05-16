@@ -225,30 +225,22 @@ function getSlice(layerNumber) {
                 //console.log('height :', height);
 
                 var pixel = 0;
-                var arrays = []
-                for(var i_array=0; i_array<aa;i_array+=1){
-                    arrays[i_array] = new Uint8Array(width*height/8);
-                }
-                var array = new Uint8Array(width*height/8);
+                var greyscale_array = new int[width*height/8];
                 var data = imageData.data;
+                var tmp_greyscale;
 
                 for(var w=0; w<data.length/height*4*aa; w+=4*aa) {
                     for(var h=w; h<width*height*4*aa; h+=(4*width*aa)) {
                         //aa
-                        var bits = 0;
+                        tmp_greyscale = 0;
                         for(var wa=w; wa<w+4*aa; wa+=4) {
                             for(var ha=wa; ha<wa+(4*width*aa); ha+=(4*width)) {
                                 if(data[h]!==0){
-                                    bits+=1;
+                                    tmp_greyscale+=1;
                                 }
                             }
                         }
-                        for(var i_array=0; i_array<aa;i_array+=1){
-                            if(1==(int)(bits/Math.pow(2,aa-i_array-1))){
-                                bits-=Math.pow(2,aa-i_array-1)
-                                arrays[aa-1-i_array][~~(pixel/8)] += Math.pow(2,(pixel%8))
-                            }
-                        }
+                        greyscale_array[pixel] = tmp_greyscale;
                         pixel++;
                     }
                 }
