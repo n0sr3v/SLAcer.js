@@ -228,6 +228,14 @@ function getSlice(layerNumber) {
                 var greyscale_array = new int[width*height/8];
                 var data = imageData.data;
                 var tmp_greyscale;
+                var tmp_greyscale_bin;
+
+                var aa_res = (aa*aa).toString('2').length;
+                var multi_arrays = [];
+
+                for(var ts=0; ts<aa_res; ts+=1){
+                    multi_arrays.push(new Uint8Array(width*height/8));
+                }
 
                 for(var w=0; w<data.length/height*4*aa; w+=4*aa) {
                     for(var h=w; h<width*height*4*aa; h+=(4*width*aa)) {
@@ -241,6 +249,15 @@ function getSlice(layerNumber) {
                             }
                         }
                         greyscale_array[pixel] = tmp_greyscale;
+
+                        //ToDo make sure Binary String always has the same length
+
+                        tmp_greyscale_bin = tmp_greyscale.toString(2).split('');
+                        for(var ts=0; ts<aa_res; ts+=1){
+                            if(tmp_greyscale_bin[ts]=='1') {
+                                multi_arrays[ts][~~(pixel / 8)] += Math.pow(2, (pixel % 8))
+                            }
+                        }
                         pixel++;
                     }
                 }
@@ -267,20 +284,6 @@ function getSlice(layerNumber) {
                     wowLayer.push(settings.get('slicer.lifting.decline'));
                     wowLayer.push(";\n{{\n");
 
-
-                    //var binary_layer = (new TextDecoder("utf-8")).decode(array)
-                    //wowFile += bin2string(array);
-
-                    //wowLayer.push(bin2JoinedChars(array));
-
-                    wowLayer=wowLayer.concat(bin2CharArray(array))
-                    //wowLayer=appendBin2Chars(array,wowLayer);
-
-                    //wowFile += array.map(intBytetoHexBin);
-                    //wowFile += "\n";
-
-                    wowLayer.push("\n");
-
                     if (settings.get('slicer.folder')) {
                         // Backup text file
                         zipFolder.file(layerNumber + ".bin", array);
@@ -293,13 +296,33 @@ function getSlice(layerNumber) {
                     }else{
                         exposure_time = settings.get('slicer.light.on');
                     }
-                    //wowFile += "}}\nM106 S"+settings.get('slicer.light.strength')+";\nG4 S" + exposure_time / 1000 + ";\n"
 
-                    wowLayer.push("}}\nM106 S");
-                    wowLayer.push(settings.get('slicer.light.strength'));
-                    wowLayer.push(";\nG4 S");
-                    wowLayer.push(exposure_time / 1000);
-                    wowLayer.push(";\n");
+
+                    //ToDo make sure exposure time is taken apart correctly
+                    for(var ts=0; ts<aa_res; ts+=1) {
+
+                        //var binary_layer = (new TextDecoder("utf-8")).decode(array)
+                        //wowFile += bin2string(array);
+
+                        //wowLayer.push(bin2JoinedChars(array));
+
+                        wowLayer = wowLayer.concat(bin2CharArray(array))
+                        //wowLayer=appendBin2Chars(array,wowLayer);
+
+                        //wowFile += array.map(intBytetoHexBin);
+                        //wowFile += "\n";
+
+                        wowLayer.push("\n");
+
+                        //wowFile += "}}\nM106 S"+settings.get('slicer.light.strength')+";\nG4 S" + exposure_time / 1000 + ";\n"
+
+                        wowLayer.push("}}\nM106 S");
+                        wowLayer.push(settings.get('slicer.light.strength'));
+                        wowLayer.push(";\nG4 S");
+                        wowLayer.push(exposure_time / 1000);
+                        wowLayer.push(";\n");
+                    }
+
 
                     wowFileArray.push(wowLayer.join(''));
                 }
