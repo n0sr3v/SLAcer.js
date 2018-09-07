@@ -778,7 +778,9 @@ function slice() {
 function endSlicing() {
 
     if(WOWExport) {// GCode & export logic
-        wowFile += "M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;"
+        // add gcode footer from settings
+        var gcode = settings.get('gcode');
+        wowFile += gcode.end;
 
         zipFile.file("print.wow", wowFile, {binary: true});
 
@@ -864,7 +866,9 @@ function startSlicing() {
         */
         //console.log(textDecoder.encode(binary_layer));
 
-        wowFile += "G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n"
+        // use gcode header from settings
+        var gcode = settings.get('gcode');
+        wowFile += gcode.start;
     }
 
     slicesNumber && slice();
