@@ -1119,11 +1119,11 @@ function resetGcodeEnd() {
 }
 
 function getDefaultGcodeStart() {
-    return 'G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n';
+    return 'G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n'; // see https://github.com/bastirichter/Sparkmaker/blob/master/file_format.md for details
 }
 
 function getDefaultGcodeEnd() {
-    return 'M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;';
+    return 'M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;'; // see https://github.com/bastirichter/Sparkmaker/blob/master/file_format.md for details
 }
 
 $gcodeStart.on('change', updateGcodeSettings);
