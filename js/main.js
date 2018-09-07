@@ -86,8 +86,8 @@ var settings = new SLAcer.Settings({
         }
     },
     gcode: {
-        start : 'G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n',
-        end: 'M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;',
+        start : getDefaultGcodeStart(),
+        end: getDefaultGcodeEnd(),
         panel: {
             collapsed: true,
             position : 8
@@ -1088,6 +1088,8 @@ $sliceColor.colorpicker().on('changeColor.colorpicker', function(e) {
 var $gcodeBody = initPanel('gcode');
 var $gcodeStart = $gcodeBody.find('#start');
 var $gcodeEnd = $gcodeBody.find('#end');
+var $gcodeResetStart = $gcodeBody.find('#resetStart');
+var $gcodeResetEnd = $gcodeBody.find('#resetEnd');
 
 function updateGcodeUI() {
     var gcode = settings.get('gcode');
@@ -1106,8 +1108,28 @@ function updateGcodeSettings() {
     });
 }
 
+function resetGcodeStart() {
+    $gcodeStart.val(getDefaultGcodeStart());
+    updateGcodeSettings();
+}
+
+function resetGcodeEnd() {
+    $gcodeEnd.val(getDefaultGcodeEnd());
+    updateGcodeSettings();
+}
+
+function getDefaultGcodeStart() {
+    return 'G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n';
+}
+
+function getDefaultGcodeEnd() {
+    return 'M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;';
+}
+
 $gcodeStart.on('change', updateGcodeSettings);
 $gcodeEnd.on('change', updateGcodeSettings);
+$gcodeResetStart.on('click', resetGcodeStart);
+$gcodeResetEnd.on('click', resetGcodeEnd);
 
 updateGcodeUI();
 

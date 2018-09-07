@@ -54,7 +54,8 @@
 }
 
 #sidebar .info-value,
-#sidebar .form-control {
+#sidebar .form-control,
+#sidebar .btn-reset {
     width: 40%;
     float: left;
 }
