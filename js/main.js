@@ -85,6 +85,14 @@ var settings = new SLAcer.Settings({
             position : 7
         }
     },
+    gcode: {
+        start : 'G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n',
+        end: 'M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;',
+        panel: {
+            collapsed: true,
+            position : 8
+        }
+    },
     viewer3d: {
         color: 0xffffff
     }
@@ -1071,6 +1079,33 @@ $sliceColor.colorpicker().on('changeColor.colorpicker', function(e) {
         viewer3d.render();
     }
 });
+
+// gcode
+var $gcodeBody = initPanel('gcode');
+var $gcodeStart = $gcodeBody.find('#start');
+var $gcodeEnd = $gcodeBody.find('#end');
+
+function updateGcodeUI() {
+    var gcode = settings.get('gcode');
+
+    $gcodeStart.val(gcode.start);
+    $gcodeEnd.val(gcode.end);
+}
+
+function updateGcodeSettings() {
+    var startText = $gcodeStart.val();
+    var endText = $gcodeEnd.val();
+
+    settings.set('gcode', {
+        start   : $gcodeStart.val(),
+        end     : $gcodeEnd.val(),
+    });
+}
+
+$gcodeStart.on('change', updateGcodeSettings);
+$gcodeEnd.on('change', updateGcodeSettings);
+
+updateGcodeUI();
 
 // Alert
 var $alertPanel   = $('#alert');
