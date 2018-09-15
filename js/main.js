@@ -85,6 +85,14 @@ var settings = new SLAcer.Settings({
             position : 7
         }
     },
+    gcode: {
+        start : getDefaultGcodeStart(),
+        end: getDefaultGcodeEnd(),
+        panel: {
+            collapsed: true,
+            position : 8
+        }
+    },
     viewer3d: {
         color: 0xffffff
     }
@@ -770,7 +778,9 @@ function slice() {
 function endSlicing() {
 
     if(WOWExport) {// GCode & export logic
-        wowFile += "M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;"
+        // add gcode footer from settings
+        var gcode = settings.get('gcode');
+        wowFile += gcode.end;
 
         zipFile.file("print.wow", wowFile, {binary: true});
 
@@ -856,7 +866,9 @@ function startSlicing() {
         */
         //console.log(textDecoder.encode(binary_layer));
 
-        wowFile += "G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n"
+        // use gcode header from settings
+        var gcode = settings.get('gcode');
+        wowFile += gcode.start;
     }
 
     slicesNumber && slice();
@@ -1071,6 +1083,55 @@ $sliceColor.colorpicker().on('changeColor.colorpicker', function(e) {
         viewer3d.render();
     }
 });
+
+// gcode
+var $gcodeBody = initPanel('gcode');
+var $gcodeStart = $gcodeBody.find('#start');
+var $gcodeEnd = $gcodeBody.find('#end');
+var $gcodeResetStart = $gcodeBody.find('#resetStart');
+var $gcodeResetEnd = $gcodeBody.find('#resetEnd');
+
+function updateGcodeUI() {
+    var gcode = settings.get('gcode');
+
+    $gcodeStart.val(gcode.start);
+    $gcodeEnd.val(gcode.end);
+}
+
+function updateGcodeSettings() {
+    var startText = $gcodeStart.val();
+    var endText = $gcodeEnd.val();
+
+    settings.set('gcode', {
+        start   : $gcodeStart.val(),
+        end     : $gcodeEnd.val(),
+    });
+}
+
+function resetGcodeStart() {
+    $gcodeStart.val(getDefaultGcodeStart());
+    updateGcodeSettings();
+}
+
+function resetGcodeEnd() {
+    $gcodeEnd.val(getDefaultGcodeEnd());
+    updateGcodeSettings();
+}
+
+function getDefaultGcodeStart() {
+    return 'G21;\nG91;\nM17;\nM106 S0;\nG28 Z0;\n;W:480;\n;H:854;\n'; // see https://github.com/bastirichter/Sparkmaker/blob/master/file_format.md for details
+}
+
+function getDefaultGcodeEnd() {
+    return 'M106 S0;\nG1 Z20.0;\nG4 S300;\nM18;'; // see https://github.com/bastirichter/Sparkmaker/blob/master/file_format.md for details
+}
+
+$gcodeStart.on('change', updateGcodeSettings);
+$gcodeEnd.on('change', updateGcodeSettings);
+$gcodeResetStart.on('click', resetGcodeStart);
+$gcodeResetEnd.on('click', resetGcodeEnd);
+
+updateGcodeUI();
 
 // Alert
 var $alertPanel   = $('#alert');
