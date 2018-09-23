@@ -208,6 +208,28 @@ function getSlice(layerNumber) {
             if (settings.get('slicer.folder')) {
                 zipFolder.file(fileName, imgData, {base64: true});
             }
+        } else if (FHDExport) {
+            // image file
+            var fileName = 'slice (' + layerNumber + ').png';
+            var imgData  = dataURL.substr(dataURL.indexOf(',') + 1);
+            zipFolder.file(fileName, imgData, {base64: true});
+
+            // gcode
+            wowFile += "M106 S0;\n"; // UV lights off
+            wowFile += "G1 Z" + settings.get('slicer.lifting.height') + " F" + settings.get('slicer.lifting.speed') + ";\n"; // raise bed up specified height and speed
+            wowFile += "G1 Z-" + (settings.get('slicer.lifting.height') - settings.get('slicer.layers.height') / 1000) + " F" + settings.get('slicer.lifting.decline') + ";\n"; // lower bed down specified height and speed
+
+            //bottom layer
+            var exposure_time;
+            if(layerNumber<=settings.get('slicer.layers.bottom')){
+                exposure_time = settings.get('slicer.light.bottom');
+            }else{
+                exposure_time = settings.get('slicer.light.on');
+            }
+
+            wowFile += "{" + fileName + "};\n"; // link to layer image
+            wowFile += "M106 S"+settings.get('slicer.light.strength')+";\n"; // UV lights on specified strength
+            wowFile += "G4 S" + exposure_time / 1000 + ";\n"; // wait specified layer cure time
         }else if (WOWExport) {
             //console.log('layer number:', layerNumber);
             //console.log('z position :', zPosition);
@@ -666,6 +688,7 @@ var $slicerLiftingHeight = $slicerBody.find('#slicer-lifting-height');
 var $slicerExportPNG = $slicerBody.find('#slicer-image-extension-png');
 var $slicerExportSVG = $slicerBody.find('#slicer-image-extension-svg');
 var $slicerExportWOW = $slicerBody.find('#slicer-image-extension-wow');
+var $slicerExportFHD = $slicerBody.find('#slicer-image-extension-fhd');
 
 var $slicerSpeedYes    = $slicerBody.find('#slicer-speed-yes');
 var $slicerSpeedNo     = $slicerBody.find('#slicer-speed-no');
@@ -715,6 +738,7 @@ function updateSlicerSettings() {
     settings.set('slicer.png', $slicerExportPNG[0].checked);
     settings.set('slicer.svg', $slicerExportSVG[0].checked);
     settings.set('slicer.wow', $slicerExportWOW[0].checked);
+    settings.set('slicer.fhd', $slicerExportFHD[0].checked);
 
     settings.set('slicer.zip', $slicerMakeZipYes[0].checked);
 
@@ -738,6 +762,7 @@ var zipFolder;
 var wowFile;
 
 var WOWExport;
+var FHDExport;
 var SVGExport;
 var PNGExport;
 
@@ -786,6 +811,15 @@ function endSlicing() {
 
         // hotfix for mirror bug
         flipGeometry();
+    } else if (FHDExport) {
+        // add gcode footer from settings
+        var gcode = settings.get('gcode'); // I believe same end gcode is valid for FHD as for standard sparkmaker - Adam
+        wowFile += gcode.end;
+
+        zipFolder.file("print.wow", wowFile, {binary: true}); // probably don't need binary, but doesn't seem to hurt
+
+        // hotfix for mirror bug
+        flipGeometry();
     }
 
     sliceImage('none');
@@ -814,6 +848,7 @@ function startSlicing() {
     zipFolder = null;
     wowFile   = null;
     WOWExport = null;
+    FHDExport = null;
     SVGExport = null;
     PNGExport = null;
 
@@ -840,9 +875,13 @@ function startSlicing() {
             declineSpeed  : parseInt(settings.get('slicer.lifting.decline')),  // mm/min
             liftingHeight : parseInt(settings.get('slicer.lifting.height'))  // mm
         }, null, 2));
-        WOWExport = settings.get('slicer.wow')
+        WOWExport = settings.get('slicer.wow');
+        FHDExport = settings.get('slicer.fhd');
         SVGExport = settings.get('slicer.svg');
         PNGExport = settings.get('slicer.png');
+        if (FHDExport) {
+            zipFolder = zipFile.folder('print-FHD');
+        }
     }
 
     if(WOWExport){// GCode logic
@@ -868,6 +907,18 @@ function startSlicing() {
 
         // use gcode header from settings
         var gcode = settings.get('gcode');
+        wowFile += gcode.start;
+    } else if (FHDExport) {
+        // hotfix for first layer bug - before flip geometry!
+        $sliderInput.slider('setValue', currentSliceNumber);
+
+        // hotfix for mirror bug
+        flipGeometry();
+
+        wowFile = "";
+
+        // use gcode header from settings
+        var gcode = settings.get('gcode'); // I believe same start gcode is valid for FHD as for standard sparkmaker - Adam
         wowFile += gcode.start;
     }
 
