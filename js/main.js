@@ -659,6 +659,8 @@ $printerType.on('change', function(e) {
     }
 });
 
+$printerType.val(settings.get('file.printer'));
+
 function printerDefaults(printerType) {
     // update settings and UI
     if (printerType == 'Sparkmaker') {
