@@ -7,7 +7,8 @@ var settings = new SLAcer.Settings({
         panel: {
             collapsed: false,
             position : 0
-        }
+        },
+        printer: 'Custom'
     },
     slicer: {
         layers: {
@@ -22,9 +23,7 @@ var settings = new SLAcer.Settings({
         },
         zip: true,
         folder: false,
-        wow: true,
-        svg: false,
-        png: false,
+        output: 'wow',
         speed: true,
         speedDelay: 10, // ms
         panel: {
@@ -208,6 +207,28 @@ function getSlice(layerNumber) {
             if (settings.get('slicer.folder')) {
                 zipFolder.file(fileName, imgData, {base64: true});
             }
+        } else if (FHDExport) {
+            // image file
+            var fileName = 'slice (' + layerNumber + ').png';
+            var imgData  = dataURL.substr(dataURL.indexOf(',') + 1);
+            zipFolder.file(fileName, imgData, {base64: true});
+
+            // gcode
+            wowFile += "M106 S0;\n"; // UV lights off
+            wowFile += "G1 Z" + settings.get('slicer.lifting.height') + " F" + settings.get('slicer.lifting.speed') + ";\n"; // raise bed up specified height and speed
+            wowFile += "G1 Z-" + (settings.get('slicer.lifting.height') - settings.get('slicer.layers.height') / 1000) + " F" + settings.get('slicer.lifting.decline') + ";\n"; // lower bed down specified height and speed
+
+            //bottom layer
+            var exposure_time;
+            if(layerNumber<=settings.get('slicer.layers.bottom')){
+                exposure_time = settings.get('slicer.light.bottom');
+            }else{
+                exposure_time = settings.get('slicer.light.on');
+            }
+
+            wowFile += "{" + fileName + "};\n"; // link to layer image
+            wowFile += "M106 S"+settings.get('slicer.light.strength')+";\n"; // UV lights on specified strength
+            wowFile += "G4 S" + exposure_time / 1000 + ";\n"; // wait specified layer cure time
         }else if (WOWExport) {
             //console.log('layer number:', layerNumber);
             //console.log('z position :', zPosition);
@@ -595,6 +616,7 @@ function parseUnit(value, unit) {
 // File panel
 var $fileBody  = initPanel('file');
 var $fileInput = $fileBody.find('#file-input');
+var $printerType = $fileBody.find('#printer-type');
 var loadedFile = null;
 
 $fileInput.on('change', function(e) {
@@ -602,6 +624,117 @@ $fileInput.on('change', function(e) {
     loadedFile = e.target.files[0];
     loader.loadFile(loadedFile);
 });
+
+$printerType.on('change', function(e) {
+    newPrinterType = $printerType.val();
+
+    if (newPrinterType == 'Custom') {
+        // update printerType setting only
+        settings.set('file.printer', newPrinterType);
+    }
+    else {
+        // TODO: need to fix slider errors when using jquery-ui full (as opposed to .min). Then we can use this confirm dialog
+//        // make sure user is willing to update screen, build volume, and outputType settings
+//        $("#dialog-confirm").html("Are you sure you want to replace screen, build volume, gcode, and outputType settings with \"" + newPrinterType + "\" defaults?");
+//        $("#dialog-confirm").dialog({
+//            resizable: false,
+//            modal: true,
+//            title: "Update Settings?",
+//            height: 250,
+//            width: 400,
+//            buttons: {
+//                "Yes": function () {
+//                    $(this).dialog('close');
+                    // update settings
+                    settings.set('file.printer', newPrinterType);
+                    printerDefaults(newPrinterType);
+//                },
+//                "No": function () {
+//                    $(this).dialog('close');
+//                    // revert printerType input to the old printer-type value from settings
+//                    $printerType.val(settings.get('file.printer'));
+//                }
+//            }
+//        });
+    }
+});
+
+$printerType.val(settings.get('file.printer'));
+
+function printerDefaults(printerType) {
+    // update settings and UI
+    if (printerType == 'Sparkmaker') {
+        // screen
+        settings.set('screen', {
+            width   : 854,
+            height  : 480,
+            diagonal: {
+                size: 4.6,
+                unit: 'in'
+            }
+        });
+        $('#screen-diagonal-unit-' + settings.get('screen.diagonal.unit')).prop('checked', true);
+        updateScreenUI();
+
+        // build volume x,y,z,unit
+        settings.set('buildVolume', {
+            size: {
+                x: 102,
+                y: 56,
+                z: 125
+            },
+            unit: 'mm'
+        });
+        $('#build-volume-unit-' + settings.get('buildVolume.unit')).prop('checked', true);
+        updateBuildVolumeUI()
+
+        // outputType
+        settings.set('slicer.output', 'wow');
+        $outputType.val(settings.get('slicer.output'));
+
+        // gcode
+        resetGcodeStart(); // gcode prefix and suffix are the same for both Sparkmaker and Sparkmaker FHD for now
+        resetGcodeEnd();
+    }
+    else if (printerType == 'Sparkmaker FHD') {
+        // screen
+        settings.set('screen', {
+            width   : 1920,
+            height  : 1080,
+            diagonal: {
+                size: 4.9686,
+                unit: 'in'
+            }
+        });
+        $('#screen-diagonal-unit-' + settings.get('screen.diagonal.unit')).prop('checked', true);
+        updateScreenUI();
+
+        // build volume
+        settings.set('buildVolume', {
+            size: {
+                x: 110.016,
+                y: 61.8357,
+                z: 125
+            },
+            unit: 'mm'
+        });
+        $('#build-volume-unit-' + settings.get('buildVolume.unit')).prop('checked', true);
+        updateBuildVolumeUI()
+
+        // outputType
+        settings.set('slicer.output', 'fhd');
+        $outputType.val(settings.get('slicer.output'));
+
+        // gcode
+        resetGcodeStart(); // gcode prefix and suffix are the same for both Sparkmaker and Sparkmaker FHD for now
+        resetGcodeEnd();
+    }
+
+    // reload 3d view with new screen and build-volume settings
+    updateBuildVolumeSettings();
+    updateScreenSettings();
+}
+
 
 // Mesh panel
 var $meshBody     = initPanel('mesh');
@@ -663,9 +796,7 @@ var $printTimeValue  = $slicerBody.find('#print-time');
 var $slicerLiftingSpeed  = $slicerBody.find('#slicer-lifting-speed');
 var $slicerLiftingHeight = $slicerBody.find('#slicer-lifting-height');
 
-var $slicerExportPNG = $slicerBody.find('#slicer-image-extension-png');
-var $slicerExportSVG = $slicerBody.find('#slicer-image-extension-svg');
-var $slicerExportWOW = $slicerBody.find('#slicer-image-extension-wow');
+var $outputType = $slicerBody.find('#output-type');
 
 var $slicerSpeedYes    = $slicerBody.find('#slicer-speed-yes');
 var $slicerSpeedNo     = $slicerBody.find('#slicer-speed-no');
@@ -712,9 +843,7 @@ function updateSlicerSettings() {
     settings.set('slicer.lifting.speed', $slicerLiftingSpeed.val());
     settings.set('slicer.lifting.height', $slicerLiftingHeight.val());
 
-    settings.set('slicer.png', $slicerExportPNG[0].checked);
-    settings.set('slicer.svg', $slicerExportSVG[0].checked);
-    settings.set('slicer.wow', $slicerExportWOW[0].checked);
+    settings.set('slicer.output', $outputType.val());
 
     settings.set('slicer.zip', $slicerMakeZipYes[0].checked);
 
@@ -738,6 +867,7 @@ var zipFolder;
 var wowFile;
 
 var WOWExport;
+var FHDExport;
 var SVGExport;
 var PNGExport;
 
@@ -786,6 +916,15 @@ function endSlicing() {
 
         // hotfix for mirror bug
         flipGeometry();
+    } else if (FHDExport) {
+        // add gcode footer from settings
+        var gcode = settings.get('gcode'); // I believe same end gcode is valid for FHD as for standard sparkmaker - Adam
+        wowFile += gcode.end;
+
+        zipFolder.file("print.wow", wowFile, {binary: true}); // probably don't need binary, but doesn't seem to hurt
+
+        // hotfix for mirror bug
+        flipGeometry();
     }
 
     sliceImage('none');
@@ -814,6 +953,7 @@ function startSlicing() {
     zipFolder = null;
     wowFile   = null;
     WOWExport = null;
+    FHDExport = null;
     SVGExport = null;
     PNGExport = null;
 
@@ -824,7 +964,7 @@ function startSlicing() {
         }
         zipFile.file("README.txt", 'Generated by SLAcer.js for SparkMaker\r\nhttps://n0sr3v.github.io/SLAcer.js/\r\n\r\nProject based on: \r\nhttps://github.com/lautr3k/SLAcer.js\r\nAppreciate this work!\r\n');
         zipFile.file("slacer.json", JSON.stringify({
-            imageExtension: settings.get('slicer.png') ? 'png' : settings.get('slicer.svg') ? 'svg' : 'wow',
+            imageExtension: settings.get('slicer.output'),
             imageDirectoryCreated: settings.get('slicer.folder') ? 'false' : 'true',
             imageDirectory: !settings.get('slicer.folder') ? '' : 'slices',
             screenWidth   : settings.get('screen.width'),
@@ -840,9 +980,21 @@ function startSlicing() {
             declineSpeed  : parseInt(settings.get('slicer.lifting.decline')),  // mm/min
             liftingHeight : parseInt(settings.get('slicer.lifting.height'))  // mm
         }, null, 2));
-        WOWExport = settings.get('slicer.wow')
-        SVGExport = settings.get('slicer.svg');
-        PNGExport = settings.get('slicer.png');
+        if ($outputType.val() == 'wow') {
+            WOWExport = true;
+        }
+        else if ($outputType.val() == 'fhd') {
+            FHDExport = true;
+        }
+        else if ($outputType.val() == 'svg') {
+            SVGExport = true;
+        }
+        else if ($outputType.val() == 'png') {
+            PNGExport = true;
+        }
+        if (FHDExport) {
+            zipFolder = zipFile.folder('print-FHD');
+        }
     }
 
     if(WOWExport){// GCode logic
@@ -868,6 +1020,18 @@ function startSlicing() {
 
         // use gcode header from settings
         var gcode = settings.get('gcode');
+        wowFile += gcode.start;
+    } else if (FHDExport) {
+        // hotfix for first layer bug - before flip geometry!
+        $sliderInput.slider('setValue', currentSliceNumber);
+
+        // hotfix for mirror bug
+        flipGeometry();
+
+        wowFile = "";
+
+        // use gcode header from settings
+        var gcode = settings.get('gcode'); // I believe same start gcode is valid for FHD as for standard sparkmaker - Adam
         wowFile += gcode.start;
     }
 
@@ -909,7 +1073,7 @@ $abortButton.on('click', function(e) {
     endSlicing();
 });
 
-$('#slicer-image-extension-' + (settings.get('slicer.png') ? 'png' : settings.get('slicer.svg') ? 'svg' : 'wow')).prop('checked', true);
+$outputType.val(settings.get('slicer.output'));
 $('#slicer-make-zip-' + (settings.get('slicer.zip') ? 'yes' : 'no')).prop('checked', true);
 
 //new
@@ -917,6 +1081,7 @@ $('#slicer-make-folder-' + (settings.get('slicer.folder') ? 'yes' : 'no')).prop(
 
 $('#slicer-speed-' + (settings.get('slicer.speed') ? 'yes' : 'no')).prop('checked', true);
 $('#slicer input').on('input, change', updateSlicerSettings);
+$('#slicer select').on('change', updateSlicerSettings);
 updateSlicerUI();
 
 // Build volume panel
