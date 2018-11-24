@@ -1,0 +1,8 @@
+{
+  "short_name": "SLAcer.js",
+  "name": "SLAcer.js (bêta)",
+  "description": "SLAcer.js (bêta)",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape"
+}
